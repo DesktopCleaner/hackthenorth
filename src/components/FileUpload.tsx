@@ -1,10 +1,14 @@
+
 import React, { useState } from 'react';
 // import uploadFile from "../../convex/functions/uploadFile";
 // import { FunctionReference } from "convex/server";
 // import { useMutation } from "convex/react";
 // import { api } from "../../convex/_generated/api";
+
 import { CohereClient } from "cohere-ai";
 import axios from "axios"
+import pdfToText from 'react-pdftotext';
+
 
 const cohere = new CohereClient({
   token: "ox62UMnb9zF2HS0t0LkTkyu7T0vgNZtjn5t32Hp3", // Replace with your actual Cohere API key
@@ -27,13 +31,19 @@ const cohere = new CohereClient({
 //     }
 
 const FileUpload: React.FC = () => {
+
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
+
+  var resumetext:string;
+
+  
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
     setSelectedFile(file);
   };
+
 
 
   // const handleSubmit = (e: React.FormEvent) => {
@@ -43,6 +53,11 @@ const FileUpload: React.FC = () => {
   //     return;
   //   }
     
+
+
+  var fileExt = selectedFile?.name.split('.').pop();
+  console.log(fileExt);
+  
 
   // const handleSubmit = (e: React.FormEvent) => {
   //   e.preventDefault();
@@ -60,13 +75,52 @@ const FileUpload: React.FC = () => {
     
     // const formData = new FormData();
     // formData.append('file', selectedFile );
+  
+    const formData = new FormData();
+    formData.append('file', selectedFile );
+
+    if (fileExt === 'pdf'){
+      await pdfToText(selectedFile)
+      .then(text1 => {resumetext = text1;});
+    }
+
+    
+    // try{
+    //   const result = await fetch("http://localhost:5173", {
+    //     method: 'POST',
+    //     body: formData,
+    //   })
+    
+    if(fileExt === "txt"){
+      const fileReader = new FileReader();
+    
+      fileReader.onload = () => {
+        var a = fileReader.result as string;
+        //console.log(fileContent);
+        resumetext = a;
+        console.log(resumetext);
+      }
+      
+      fileReader.readAsText(selectedFile);
+      
+    }
+    
+    console.log(resumetext);
+
+      // const data = await result.text;
+      // console.log(data);
+    // }
+    // catch (error){
+    //   console.error(error);
+    // }
+    
 
     
     try {
 
       // Read file content
       // const fileContent = await selectedFile.text();
-      const ph = "abc";
+      //const ph = "abc";
       console.log("trying!....");
 
       // Send to Cohere API
@@ -74,7 +128,7 @@ const FileUpload: React.FC = () => {
       console.log(isLoading)
 
       const response = await cohere.chat({
-        message: `Please revise the following resume:\n\n${ph} `,
+        message: `Please provide feedback and suggestions on the resume using short and simple bullet points, without rewriting the resume:\n\n${resumetext} `,
         model: "command", // or any other suitable model
         temperature: 0.3,
       });
@@ -124,7 +178,7 @@ const FileUpload: React.FC = () => {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col items-center">
-      <label htmlFor="file" className="mb-2">Upload your resume (PDF, Word):</label>
+      <label htmlFor="file" className="mb-2">Upload your resume (PDF, Word, txt):</label>
       <input 
         type="file" 
         id="file"
